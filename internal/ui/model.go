@@ -70,7 +70,8 @@ var (
 			Border(gloss.RoundedBorder()).
 			BorderForeground(gloss.AdaptiveColor{Light: "#dee2e6", Dark: "#343a40"}).
 			Padding(1, 4).
-			Align(gloss.Center)
+			Align(gloss.Center).
+			Width(12)
 
 	dimStyle = gloss.NewStyle().
 			Foreground(gloss.AdaptiveColor{Light: "#adb5bd", Dark: "#6c757d"})

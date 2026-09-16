@@ -4,6 +4,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	gloss "github.com/charmbracelet/lipgloss"
 )
 
 type tickMsg time.Time
@@ -21,6 +23,9 @@ type Model struct {
 	startedAt   time.Time
 	elapsed     time.Duration
 	accumulated time.Duration
+
+	width  int
+	height int
 }
 
 func New() Model { return Model{} }
@@ -31,6 +36,11 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
+
 	case tickMsg:
 		if !m.running {
 			return m, nil
@@ -51,15 +61,57 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+var (
+	clockStyle = gloss.NewStyle().
+			Bold(true).
+			Foreground(gloss.AdaptiveColor{Light: "#1971c2", Dark: "#4dabf7"})
+
+	cardStyle = gloss.NewStyle().
+			Border(gloss.RoundedBorder()).
+			BorderForeground(gloss.AdaptiveColor{Light: "#dee2e6", Dark: "#343a40"}).
+			Padding(1, 4).
+			Align(gloss.Center)
+
+	dimStyle = gloss.NewStyle().
+			Foreground(gloss.AdaptiveColor{Light: "#adb5bd", Dark: "#6c757d"})
+
+	dotReady = gloss.NewStyle().
+			Foreground(gloss.AdaptiveColor{Light: "#adb5bd", Dark: "#6c757d"})
+
+	dotRunning = gloss.NewStyle().
+			Foreground(gloss.AdaptiveColor{Light: "#2f9e44", Dark: "#51cf66"})
+
+	dotStopped = gloss.NewStyle().
+			Foreground(gloss.AdaptiveColor{Light: "#e8590c", Dark: "#ffd43b"})
+)
+
 func (m Model) View() string {
-	status := "ready"
+	status, dot := "ready", dotReady
 	switch {
 	case m.running:
-		status = "running"
+		status, dot = "running", dotRunning
 	case m.elapsed > 0:
-		status = "stopped"
+		status, dot = "stopped", dotStopped
 	}
-	return "\n  " + m.elapsed.String() + "\n\n  " + status + "\n\n  space start/stop   r reset   q quit\n"
+
+	card := cardStyle.Render(gloss.JoinVertical(
+		gloss.Center,
+		clockStyle.Render(format(m.elapsed)),
+		"",
+		dot.Render("●")+" "+dimStyle.Render(status),
+	))
+
+	body := lipgloss.JoinVertical(gloss.Center,
+		card,
+		"",
+		dimStyle.Render("space start/stop   r reset   q quit"),
+	)
+
+	if m.width == 0 || m.height == 0 {
+		return body
+	}
+
+	return gloss.Place(m.width, m.height, gloss.Center, gloss.Center, body)
 }
 
 func (m Model) toggle() (tea.Model, tea.Cmd) {
